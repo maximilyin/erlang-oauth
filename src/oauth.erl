@@ -76,14 +76,15 @@ signature_params(Consumer, Params, Token) ->
   signature_params(Consumer, [{"oauth_token", Token} | Params]).
 
 signature_params(Consumer, Params) ->
-  Timestamp = unix_timestamp(),
-  Nonce = base64:encode_to_string(crypto:rand_bytes(32)), % cf. ruby-oauth
-  [ {"oauth_version", "1.0"}
-  , {"oauth_nonce", Nonce}
-  , {"oauth_timestamp", integer_to_list(Timestamp)}
-  , {"oauth_signature_method", signature_method_string(Consumer)}
-  , {"oauth_consumer_key", consumer_key(Consumer)}
-  | Params
+    Timestamp = unix_timestamp(),
+    Nonce = base64:encode_to_string(crypto:rand_bytes(32)),
+    [ 
+        {"oauth_version", "1.0"}, 
+        {"oauth_nonce", Nonce},
+        {"oauth_callback", "http://localhost"},
+        {"oauth_timestamp", integer_to_list(Timestamp)},
+        {"oauth_signature_method", signature_method_string(Consumer)},
+        {"oauth_consumer_key", consumer_key(Consumer)}|Params
   ].
 
 verify(Signature, HttpMethod, URL, Params, Consumer, TokenSecret) ->
@@ -141,7 +142,7 @@ hmac_sha(Key, Data) ->
     true ->
       crypto:hmac(sha, Key, Data);
     false ->
-      crypto:sha_mac(Key, Data)
+      crypto:hmac(sha, Key, Data)
   end.
 
 rsa_sha1_signature(HttpMethod, URL, Params, Consumer) ->
@@ -181,7 +182,6 @@ signature_base_string(HttpMethod, URL, Params) ->
   uri_join([HttpMethod, uri_normalize(URL), params_encode(Params)]).
 
 params_encode(Params) ->
-  % cf. http://tools.ietf.org/html/rfc5849#section-3.4.1.3.2
   Encoded = [{uri_encode(K), uri_encode(V)} || {K, V} <- Params],
   Sorted = lists:sort(Encoded),
   Concatenated = [lists:concat([K, "=", V]) || {K, V} <- Sorted],
